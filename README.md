@@ -286,7 +286,7 @@ $ curl http://localhost:5000/users
 
 ## 🎥 Демонстрация
 
-![GIF демонстрации](gifs/demo.gif)
+![GIF демонстрации](demo.gif)
 
 ## 🧑‍💻 Автор
 
