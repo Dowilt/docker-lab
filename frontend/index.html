@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Lab - User Management</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            color: #2196F3;
+        }
+        h2 {
+            margin: 15px 0 10px;
+            color: #555;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 5px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        input[type="text"], input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 24px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #fff;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        .btn-primary { background: #2196F3; }
+        .btn-success { background: #4CAF50; }
+        .btn-info { background: #00BCD4; }
+        .btn-warning { background: #FF9800; }
+        .btn-danger { background: #f44336; }
+        .actions { margin: 10px 0; }
+        #result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #263238;
+            color: #80CBC4;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 60px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th { background: #f0f0f0; font-weight: 600; }
+        .status { text-align: center; padding: 5px; border-radius: 4px; font-weight: 600; }
+        .status.ok { background: #C8E6C9; color: #2E7D32; }
+        .status.error { background: #FFCDD2; color: #C62828; }
+        .loader {
+            display: inline-block;
+            width: 16px; height: 16px;
+            border: 2px solid #ccc;
+            border-top-color: #2196F3;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>Docker Lab - User Management</h1>
+
+    <div class="card">
+        <h2>Create User</h2>
+        <form id="userForm" onsubmit="createUser(event)">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" placeholder="Enter name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Enter email" required>
+            </div>
+            <button type="submit" class="btn-success">Create User</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Actions</h2>
+        <div class="actions">
+            <button class="btn-primary" onclick="getAppInfo()">App Info</button>
+            <button class="btn-info" onclick="getUsers()">Get Users</button>
+            <button class="btn-warning" onclick="getStats()">Statistics</button>
+            <button class="btn-danger" onclick="healthCheck()">Health Check</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Users</h2>
+        <div id="usersTable"></div>
+    </div>
+
+    <div class="card">
+        <h2>API Response</h2>
+        <div id="result">Click any button to see the response...</div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+
+        function showResult(data) {
+            document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+        }
+
+        function showLoading() {
+            document.getElementById('result').innerHTML = '<span class="loader"></span> Loading...';
+        }
+
+        async function apiCall(url, options = {}) {
+            showLoading();
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                showResult(data);
+                return data;
+            } catch (error) {
+                showResult({ error: 'Connection failed: ' + error.message });
+                return null;
+            }
+        }
+
+        async function getAppInfo() {
+            await apiCall(`${API_URL}/`);
+        }
+
+        async function getUsers() {
+            const data = await apiCall(`${API_URL}/users`);
+            if (data && data.users) {
+                renderUsersTable(data.users);
+            }
+        }
+
+        async function createUser(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const data = await apiCall(`${API_URL}/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email })
+            });
+            if (data && !data.error) {
+                document.getElementById('userForm').reset();
+                getUsers();
+            }
+        }
+
+        async function getStats() {
+            await apiCall(`${API_URL}/stats`);
+        }
+
+        async function healthCheck() {
+            await apiCall(`${API_URL}/health`);
+        }
+
+        function renderUsersTable(users) {
+            if (users.length === 0) {
+                document.getElementById('usersTable').innerHTML = '<p>No users found.</p>';
+                return;
+            }
+            let html = '<table><tr><th>ID</th><th>Name</th><th>Email</th><th>Created</th></tr>';
+            users.forEach(u => {
+                const date = new Date(u.created_at).toLocaleString('ru-RU');
+                html += `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td>${date}</td></tr>`;
+            });
+            html += '</table>';
+            document.getElementById('usersTable').innerHTML = html;
+        }
+
+        // Load users on page load
+        getUsers();
+    </script>
+</body>
+</html>
